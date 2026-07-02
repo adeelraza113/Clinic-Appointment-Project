@@ -1,0 +1,52 @@
+{% extends 'layout_base.html' %}
+
+{% block main_content %}
+<div class="row">
+    <!-- Feedback Messages -->
+    {% if messages %}
+        <div class="col-12">
+            {% for msg in messages %}
+                <div class="alert alert-info">{{ msg }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Bookings Table -->
+    <div class="col-md-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Scheduled Clinical Slots</h5>
+                <a href="{% url 'book_slot_url' %}" class="btn btn-sm btn-light">New Slot</a>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Patient Track</th>
+                            <th>Assigned Professional</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bookings %}
+                        <tr>
+                            <td><strong>{{ b.registered_patient.full_name }}</strong></td>
+                            <td>Dr. {{ b.assigned_doctor.expert_name }}</td>
+                            <td>{{ b.schedule_date }}</td>
+                            <td>{{ b.schedule_time }}</td>
+                            <td><span class="badge bg-warning text-dark">{{ b.current_status }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No consultation slots booked yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
