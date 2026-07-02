@@ -118,15 +118,15 @@ def global_logout_view(request):
     logout(request)
     return redirect('login_url')
 
+
 @login_required(login_url='login_url')
 def create_appointment_slot(request):
-    """Processes booking validation and restricts patient visibility based on roles."""
+    """Processes booking validation with accurate error rendering on the same screen."""
     is_staff = request.user.is_superuser or request.user.is_staff
     is_patient = hasattr(request.user, 'patientrecord')
 
     if request.method == "POST":
         doc_id = request.POST.get('doc_selection')
-        # Agar user staff hai to input form se ID lega, warna logged-in patient ki apni ID inject hogi
         pat_id = request.POST.get('pat_selection') if is_staff else request.user.patientrecord.id
         b_date = request.POST.get('booking_date')
         b_time = request.POST.get('booking_time')
@@ -135,6 +135,26 @@ def create_appointment_slot(request):
             doctor_obj = MedicalSpecialist.objects.get(id=doc_id)
             patient_obj = PatientRecord.objects.get(id=pat_id)
             
+            # --- CONCURRENCY PROTECTION ENGINE ---
+            conflict_exists = BookingSlot.objects.filter(
+                assigned_doctor=doctor_obj,
+                schedule_date=b_date,
+                schedule_time=b_time,
+                current_status='Active'
+            ).exists()
+            
+            if conflict_exists:
+                messages.error(request, f"Dr. {doctor_obj.expert_name} is already booked for {b_date} at {b_time}. Please select another slot.")
+                
+                all_specialists = MedicalSpecialist.objects.all()
+                filtered_patients = PatientRecord.objects.all() if is_staff else [request.user.patientrecord]
+                return render(request, 'schedule_slot.html', {
+                    'specialists': all_specialists, 
+                    'patients': filtered_patients, 
+                    'is_staff': is_staff
+                })
+            # -------------------------------------
+
             BookingSlot.objects.create(
                 assigned_doctor=doctor_obj,
                 registered_patient=patient_obj,
@@ -144,17 +164,8 @@ def create_appointment_slot(request):
             messages.success(request, "Appointment slot successfully scheduled!")
             return redirect('dashboard_url')
             
-    # --- GET Request Data Isolation ---
     all_specialists = MedicalSpecialist.objects.all()
-    
-    if is_staff:
-        # Staff can assign slots to any patient in the database
-        filtered_patients = PatientRecord.objects.all()
-    elif is_patient:
-        # Standard patient can only view themselves in the allocation pipeline
-        filtered_patients = [request.user.patientrecord]
-    else:
-        filtered_patients = []
+    filtered_patients = PatientRecord.objects.all() if is_staff else [request.user.patientrecord]
 
     context = {
         'specialists': all_specialists, 
@@ -162,6 +173,7 @@ def create_appointment_slot(request):
         'is_staff': is_staff
     }
     return render(request, 'schedule_slot.html', context)
+
 
 def alter_booking_status(request, slot_id, target_action):
     """Updates the execution lifecycle of a scheduled clinical slot."""
