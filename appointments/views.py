@@ -1,45 +1,94 @@
 from django.shortcuts import render, redirect
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import MedicalSpecialist, PatientRecord, BookingSlot
 
+@login_required(login_url='login_url')
 def clinic_dashboard_view(request):
-    """Main panel to overview specialists, records, and book slots."""
-    all_specialists = MedicalSpecialist.objects.all()
-    all_records = PatientRecord.objects.all()
-    active_bookings = BookingSlot.objects.all().order_by('-schedule_date')
-    
+    """Multi-tenant unified dashboard sorting data based on operational privileges."""
+    is_patient = hasattr(request.user, 'patientrecord')
+    is_staff = request.user.is_superuser or request.user.is_staff
+
+    if is_staff:
+        active_bookings = BookingSlot.objects.all().order_by('-schedule_date')
+        all_records = PatientRecord.objects.all()
+    elif is_patient:
+        current_patient = request.user.patientrecord
+        active_bookings = BookingSlot.objects.filter(registered_patient=current_patient).order_by('-schedule_date')
+        all_records = [current_patient]
+    else:
+        active_bookings = []
+        all_records = []
+
     context = {
-        'specialists': all_specialists,
-        'patients': all_records,
         'bookings': active_bookings,
+        'patients': all_records,
+        'specialists': MedicalSpecialist.objects.all(),
+        'is_staff': is_staff,
+        'is_patient': is_patient,
     }
     return render(request, 'dashboard.html', context)
 
+def patient_signup_view(request):
+    """Public portal allowing new users to provision encrypted patient records."""
+    if request.user.is_authenticated:
+        return redirect('dashboard_url')
 
-def register_new_patient(request):
-    """Saves a new patient record into MySQL."""
     if request.method == "POST":
+        u_name = request.POST.get('account_user')
+        u_pass = request.POST.get('account_pass')
         p_name = request.POST.get('client_name')
         p_age = request.POST.get('client_age')
         p_gender = request.POST.get('client_gender')
         p_phone = request.POST.get('client_phone')
-        p_notes = request.POST.get('client_notes', '')
 
-        if p_name and p_age and p_phone:
+        # Integrity Checks
+        if User.objects.filter(username=u_name).exists():
+            messages.error(request, "Username already registered in our system.")
+            return render(request, 'signup.html')
+
+        if u_name and u_pass and p_name:
+            new_user = User.objects.create_user(username=u_name, password=u_pass)
             PatientRecord.objects.create(
+                user_auth=new_user,
                 full_name=p_name,
                 age_years=p_age,
                 gender_identity=p_gender,
-                phone_primary=p_phone,
-                health_notes=p_notes
+                phone_primary=p_phone
             )
-            messages.success(request, "Patient profile successfully logged!")
+            
+            login(request, new_user)
+            messages.success(request, "Account provisioned successfully!")
+            return redirect('dashboard_url')
+
+    return render(request, 'signup.html')
+
+
+def global_login_view(request):
+    """Central gateway routing users to their respective privilege-based context."""
+    if request.user.is_authenticated:
+        return redirect('dashboard_url')
+
+    if request.method == "POST":
+        u_name = request.POST.get('input_user')
+        u_pass = request.POST.get('input_pass')
+        
+        user = authenticate(request, username=u_name, password=u_pass)
+        if user is not None:
+            login(request, user)
             return redirect('dashboard_url')
         else:
-            messages.error(request, "Please enter all required fields.")
-            
-    return render(request, 'register_patient.html')
+            messages.error(request, "Invalid security credentials.")
 
+    return render(request, 'login.html')
+
+
+def global_logout_view(request):
+    """Flushes active sessions completely."""
+    logout(request)
+    return redirect('login_url')
 
 def create_appointment_slot(request):
     """Processes booking validation and engine storage."""
