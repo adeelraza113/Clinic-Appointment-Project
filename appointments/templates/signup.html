@@ -1,0 +1,26 @@
+{% extends 'layout_base.html' %}
+{% block main_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white"><h5>Patient Self-Registration</h5></div>
+            <div class="card-body">
+                {% if messages %}{% for m in messages %}<div class="alert alert-danger">{{m}}</div>{% endfor %}{% endif %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <h6 class="text-muted mb-3 border-bottom pb-2">Account Credentials</h6>
+                    <div class="mb-3"><label>Username</label><input type="text" name="account_user" class="form-control" required></div>
+                    <div class="mb-3"><label>Password</label><input type="password" name="account_pass" class="form-control" required></div>
+                    
+                    <h6 class="text-muted mb-3 border-bottom pb-2 mt-4">Personal Medical Details</h6>
+                    <div class="mb-3"><label>Full Name</label><input type="text" name="client_name" class="form-control" required></div>
+                    <div class="row"><div class="col-6 mb-3"><label>Age</label><input type="number" name="client_age" class="form-control" required></div>
+                    <div class="col-6 mb-3"><label>Gender</label><select name="client_gender" class="form-select"><option value="Male">Male</option><option value="Female">Female</option></select></div></div>
+                    <div class="mb-3"><label>Phone Number</label><input type="text" name="client_phone" class="form-control" required></div>
+                    <button type="submit" class="btn btn-primary w-100">Initialize Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -31,6 +31,30 @@ def clinic_dashboard_view(request):
     }
     return render(request, 'dashboard.html', context)
 
+def register_new_patient(request):
+    """Saves a new patient record into MySQL."""
+    if request.method == "POST":
+        p_name = request.POST.get('client_name')
+        p_age = request.POST.get('client_age')
+        p_gender = request.POST.get('client_gender')
+        p_phone = request.POST.get('client_phone')
+        p_notes = request.POST.get('client_notes', '')
+
+        if p_name and p_age and p_phone:
+            PatientRecord.objects.create(
+                full_name=p_name,
+                age_years=p_age,
+                gender_identity=p_gender,
+                phone_primary=p_phone,
+                health_notes=p_notes
+            )
+            messages.success(request, "Patient profile successfully logged!")
+            return redirect('dashboard_url')
+        else:
+            messages.error(request, "Please enter all required fields.")
+            
+    return render(request, 'register_patient.html')
+
 def patient_signup_view(request):
     """Public portal allowing new users to provision encrypted patient records."""
     if request.user.is_authenticated:
@@ -50,7 +74,10 @@ def patient_signup_view(request):
             return render(request, 'signup.html')
 
         if u_name and u_pass and p_name:
+            # 1. Base User create karein (Encrypted)
             new_user = User.objects.create_user(username=u_name, password=u_pass)
+            
+            # 2. Patient Record create karke secure profile linkage lagayein
             PatientRecord.objects.create(
                 user_auth=new_user,
                 full_name=p_name,
@@ -59,6 +86,7 @@ def patient_signup_view(request):
                 phone_primary=p_phone
             )
             
+            # 3. Direct Login session start karein
             login(request, new_user)
             messages.success(request, "Account provisioned successfully!")
             return redirect('dashboard_url')
@@ -90,11 +118,16 @@ def global_logout_view(request):
     logout(request)
     return redirect('login_url')
 
+@login_required(login_url='login_url')
 def create_appointment_slot(request):
-    """Processes booking validation and engine storage."""
+    """Processes booking validation and restricts patient visibility based on roles."""
+    is_staff = request.user.is_superuser or request.user.is_staff
+    is_patient = hasattr(request.user, 'patientrecord')
+
     if request.method == "POST":
         doc_id = request.POST.get('doc_selection')
-        pat_id = request.POST.get('pat_selection')
+        # Agar user staff hai to input form se ID lega, warna logged-in patient ki apni ID inject hogi
+        pat_id = request.POST.get('pat_selection') if is_staff else request.user.patientrecord.id
         b_date = request.POST.get('booking_date')
         b_time = request.POST.get('booking_time')
 
@@ -111,9 +144,24 @@ def create_appointment_slot(request):
             messages.success(request, "Appointment slot successfully scheduled!")
             return redirect('dashboard_url')
             
+    # --- GET Request Data Isolation ---
     all_specialists = MedicalSpecialist.objects.all()
-    all_records = PatientRecord.objects.all()
-    return render(request, 'schedule_slot.html', {'specialists': all_specialists, 'patients': all_records})
+    
+    if is_staff:
+        # Staff can assign slots to any patient in the database
+        filtered_patients = PatientRecord.objects.all()
+    elif is_patient:
+        # Standard patient can only view themselves in the allocation pipeline
+        filtered_patients = [request.user.patientrecord]
+    else:
+        filtered_patients = []
+
+    context = {
+        'specialists': all_specialists, 
+        'patients': filtered_patients,
+        'is_staff': is_staff
+    }
+    return render(request, 'schedule_slot.html', context)
 
 def alter_booking_status(request, slot_id, target_action):
     """Updates the execution lifecycle of a scheduled clinical slot."""

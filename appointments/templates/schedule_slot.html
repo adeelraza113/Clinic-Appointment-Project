@@ -10,25 +10,33 @@
             <div class="card-body">
                 <form method="POST">
                     {% csrf_token %}
-                    
+
                     <!-- Patient Selection Dropdown -->
                     <div class="mb-3">
                         <label class="form-label">Select Registered Patient</label>
+                        {% if is_staff %}
                         <select name="pat_selection" class="form-select" required>
                             <option value="">-- Choose Patient --</option>
                             {% for p in patients %}
-                                <option value="{{ p.id }}">{{ p.full_name }}</option>
+                            <option value="{{ p.id }}">{{ p.full_name }}</option>
                             {% endfor %}
                         </select>
+                        {% else %}
+                        <!-- Normal user is auto-locked into their profile -->
+                        {% for p in patients %}
+                        <input type="text" class="form-control" value="{{ p.full_name }}" readonly>
+                        <input type="hidden" name="pat_selection" value="{{ p.id }}">
+                        {% endfor %}
+                        {% endif %}
                     </div>
-
                     <!-- Doctor Selection Dropdown -->
                     <div class="mb-3">
                         <label class="form-label">Select Medical Specialist</label>
                         <select name="doc_selection" class="form-select" required>
                             <option value="">-- Choose Doctor --</option>
                             {% for d in specialists %}
-                                <option value="{{ d.id }}">Dr. {{ d.expert_name }} ({{ d.field_of_expertise }}) — Fee: {{ d.consultation_fee }} PKR</option>
+                            <option value="{{ d.id }}">Dr. {{ d.expert_name }} ({{ d.field_of_expertise }}) — Fee: {{
+                                d.consultation_fee }} PKR</option>
                             {% endfor %}
                         </select>
                     </div>
