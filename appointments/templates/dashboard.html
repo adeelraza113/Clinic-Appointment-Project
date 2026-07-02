@@ -4,11 +4,11 @@
 <div class="row">
     <!-- Feedback Messages -->
     {% if messages %}
-        <div class="col-12">
-            {% for msg in messages %}
-                <div class="alert alert-info">{{ msg }}</div>
-            {% endfor %}
-        </div>
+    <div class="col-12">
+        {% for msg in messages %}
+        <div class="alert alert-info">{{ msg }}</div>
+        {% endfor %}
+    </div>
     {% endif %}
 
     <!-- Bookings Table -->
@@ -27,6 +27,7 @@
                             <th>Date</th>
                             <th>Time</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -37,6 +38,16 @@
                             <td>{{ b.schedule_date }}</td>
                             <td>{{ b.schedule_time }}</td>
                             <td><span class="badge bg-warning text-dark">{{ b.current_status }}</span></td>
+                            <td>
+                                {% if b.current_status == 'Active' %}
+                                <a href="{% url 'alter_status_url' b.id 'Completed' %}"
+                                    class="btn btn-sm btn-outline-success py-0" style="font-size: 0.75rem;">Complete</a>
+                                <a href="{% url 'alter_status_url' b.id 'Cancelled' %}"
+                                    class="btn btn-sm btn-outline-danger py-0" style="font-size: 0.75rem;">Cancel</a>
+                                {% else %}
+                                <span class="text-muted" style="font-size: 0.8rem;">Archived</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>

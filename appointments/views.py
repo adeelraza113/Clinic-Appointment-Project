@@ -65,3 +65,16 @@ def create_appointment_slot(request):
     all_specialists = MedicalSpecialist.objects.all()
     all_records = PatientRecord.objects.all()
     return render(request, 'schedule_slot.html', {'specialists': all_specialists, 'patients': all_records})
+
+def alter_booking_status(request, slot_id, target_action):
+    """Updates the execution lifecycle of a scheduled clinical slot."""
+    try:
+        target_slot = BookingSlot.objects.get(id=slot_id)
+        if target_action in ['Completed', 'Cancelled']:
+            target_slot.current_status = target_action
+            target_slot.save()
+            messages.success(request, f"Slot state successfully marked as {target_action}!")
+    except BookingSlot.DoesNotExist:
+        messages.error(request, "Requested operational slot not found.")
+        
+    return redirect('dashboard_url')
