@@ -1,0 +1,29 @@
+{% extends 'layout_base.html' %}
+{% block main_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-dark shadow">
+            <div class="card-body p-4">
+                <div class="text-center border-bottom pb-3 mb-3">
+                    <h3>Sird CareClinic Engine</h3>
+                    <p class="text-muted mb-0">Official Electronic Billing Invoice Document</p>
+                </div>
+                <h5>Invoice Meta Details:</h5>
+                <p class="mb-1"><strong>Invoice reference:</strong> INV-00{{ invoice.id }}</p>
+                <p class="mb-1"><strong>Patient Subject:</strong> {{ booking.registered_patient.full_name }}</p>
+                <p class="mb-4"><strong>Attending Specialist:</strong> Dr. {{ booking.assigned_doctor.expert_name }}</p>
+                
+                <table class="table border-top">
+                    <thead><tr><th>Description</th><th class="text-end">Amount (PKR)</th></tr></thead>
+                    <tbody>
+                        <tr><td>Consultation Base Fee</td><td class="text-end">{{ invoice.base_consultation_fee }}</td></tr>
+                        <tr><td>Hospital Service Cess / Tax</td><td class="text-end">{{ invoice.healthcare_tax }}</td></tr>
+                        <tr class="table-dark fw-bold"><td>Grand Total Payable</td><td class="text-end">{{ invoice.grand_total_payable }} PKR</td></tr>
+                    </tbody>
+                </table>
+                <div class="d-grid mt-4"><button onclick="window.print()" class="btn btn-dark">Print Medical Receipt</button></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
