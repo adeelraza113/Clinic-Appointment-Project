@@ -116,8 +116,9 @@ def add_clinical_summary_view(request, slot_id):
         meds = request.POST.get('medications')
         
         ClinicalPrescription.objects.create(associated_booking=booking, symptoms_observed=symptoms, prescribed_medication=meds)
-        base_fee = booking.assigned_doctor.consultation_fee
-        tax = 150.00
+        base_fee = Decimal(str(booking.assigned_doctor.consultation_fee))
+        tax_percentage = Decimal('0.05') 
+        tax = base_fee * tax_percentage
         grand_total = base_fee + tax
         
         FinancialInvoice.objects.create(linked_booking=booking, base_consultation_fee=base_fee, healthcare_tax=tax, grand_total_payable=grand_total)

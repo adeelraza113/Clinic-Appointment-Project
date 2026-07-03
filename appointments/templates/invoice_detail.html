@@ -63,14 +63,14 @@
                                     Clinical Consultation Fee <br>
                                     <small class="text-muted fw-normal">Direct specialist mapping allocation</small>
                                 </td>
-                                <td class="text-end pe-3 fw-bold text-secondary">PKR {{ consultation_fee }}</td>
+                                <td class="text-end pe-3 fw-bold text-secondary">PKR {{ consultation_fee|floatformat:2 }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-3 fw-medium">
                                     Hospital Operational Surcharge <br>
                                     <small class="text-muted fw-normal">Administrative and platform overheads</small>
                                 </td>
-                                <td class="text-end pe-3 text-secondary">PKR {{ hospital_charges }}</td>
+                                <td class="text-end pe-3 text-secondary">PKR {{ hospital_charges|floatformat:2 }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -87,7 +87,7 @@
                             <hr class="my-2 opacity-50">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="fw-bold text-dark">Grand Total:</span>
-                                <span class="fs-5 fw-bold text-dark">PKR {{ grand_total }}</span>
+                                <span class="fs-5 fw-bold text-dark">PKR {{ grand_total|floatformat:2 }}</span>
                             </div>
                         </div>
                     </div>

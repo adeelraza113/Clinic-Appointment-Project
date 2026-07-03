@@ -22,23 +22,29 @@
                     </div>
                 </div>
 
-                <form method="POST">
+
+                <form method="POST" action="{% url 'treat_patient_url' slot_id=booking.id %}">
                     {% csrf_token %}
                     <!-- Clinical Notes System -->
                     <div class="mb-4">
                         <label class="form-label fw-bold text-dark">Clinical Observations / Diagnosis</label>
-                        <textarea name="clinical_notes" class="form-control" rows="4" placeholder="Type baseline symptoms, vital status logs, and clinical observations..." required></textarea>
+                        <textarea name="clinical_notes" class="form-control" rows="4"
+                            placeholder="Type baseline symptoms, vital status logs, and clinical observations..."
+                            required></textarea>
                     </div>
 
                     <!-- Medication Matrix System -->
                     <div class="mb-4">
                         <label class="form-label fw-bold text-dark">E-Prescription & Medication Plan</label>
-                        <textarea name="medication_plan" class="form-control" rows="4" placeholder="e.g., Tab. Panadol 500mg — 1-0-1 (After Meals) for 5 Days" required></textarea>
+                        <textarea name="medication_plan" class="form-control" rows="4"
+                            placeholder="e.g., Tab. Panadol 500mg — 1-0-1 (After Meals) for 5 Days" required></textarea>
                     </div>
 
                     <div class="d-flex gap-2">
                         <a href="{% url 'dashboard_url' %}" class="btn btn-light border flex-fill">Cancel Session</a>
-                        <button type="submit" class="btn btn-dark flex-fill fw-medium">Finalize Treatment & Close File</button>
+                        <button type="submit" class="btn btn-dark flex-fill fw-medium">
+                            Finalize Treatment & Close File
+                        </button>
                     </div>
                 </form>
             </div>
