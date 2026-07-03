@@ -15,4 +15,5 @@ urlpatterns = [
     path('booking/treat/<int:slot_id>/', add_clinical_summary_view, name='add_prescription_url'),
     path('booking/invoice/<int:slot_id>/', view_invoice_view, name='view_invoice_url'),
     path('management/onboard-doctor/', doctor_onboarding_view, name='onboard_doctor_url'),
+    
 ]

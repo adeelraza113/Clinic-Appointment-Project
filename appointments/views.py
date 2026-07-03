@@ -226,16 +226,13 @@ def treat_patient_view(request, slot_id):
     """Secured clinical view to transition appointment states and record observations."""
     booking = get_object_or_404(BookingSlot, id=slot_id)
     
-    # 1. Strict Ownership Enforcement
-    # Verify karein ke current user wahi assigned doctor hai jiski appointments_medicalspecialist entry mapped hai
     is_assigned_doctor = hasattr(request.user, 'medicalspecialist') and booking.assigned_doctor == request.user.medicalspecialist
     
     if not is_assigned_doctor:
         messages.error(request, "Access Denied: You are not the assigned specialist for this patient transaction.")
         return redirect('dashboard_url')
         
-    # Prevent multi-execution state mutations
-    if booking.current_status == 'Completed':  # Apne status string check kar lein (e.g., 'Completed', 'Treated')
+    if booking.current_status == 'Completed':  
         messages.warning(request, "Clinical log warning: This case entry is already locked and completed.")
         return redirect('dashboard_url')
 
@@ -245,11 +242,8 @@ def treat_patient_view(request, slot_id):
         
         try:
             with transaction.atomic():
-                # 2. State transition change
                 booking.current_status = 'Completed'
                 
-                # Agar aapki DB schema mein notes save karne ke columns hain to update karein,
-                # otherwise aap metadata field ya alag prescription model update kar sakte hain:
                 if hasattr(booking, 'doctor_notes'):
                     booking.doctor_notes = clinical_notes
                 if hasattr(booking, 'prescription_details'):
