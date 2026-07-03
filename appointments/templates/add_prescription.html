@@ -1,0 +1,19 @@
+{% extends 'layout_base.html' %}
+{% block main_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white"><h5>Clinical Summary Input Center</h5></div>
+            <div class="card-body">
+                <p><strong>Patient Name:</strong> {{ booking.registered_patient.full_name }}</p>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3"><label>Symptoms Observed</label><textarea name="symptoms" class="form-control" rows="3" required></textarea></div>
+                    <div class="mb-3"><label>Prescribed Medications & Plan</label><textarea name="medications" class="form-control" rows="3" required></textarea></div>
+                    <button type="submit" class="btn btn-success w-100">Finalize Session & Bill Patient</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

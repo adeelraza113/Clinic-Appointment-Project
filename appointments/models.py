@@ -40,3 +40,26 @@ class BookingSlot(models.Model):
 
     def __str__(self):
         return f"{self.registered_patient.full_name} -> {self.assigned_doctor.expert_name} on {self.schedule_date}"
+    
+class ClinicalPrescription(models.Model):
+    """Stores high-confidentiality check-up summary and drugs prescribed by the specialist."""
+    associated_booking = models.OneToOneField('BookingSlot', on_delete=models.CASCADE, related_name='medical_record')
+    symptoms_observed = models.TextField()
+    prescribed_medication = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Record for Booking #{self.associated_booking.id}"
+
+
+class FinancialInvoice(models.Model):
+    """Automated billing accounting engine calculating base fees, clinical taxes, and grand totals."""
+    linked_booking = models.OneToOneField('BookingSlot', on_delete=models.CASCADE, related_name='invoice')
+    base_consultation_fee = models.DecimalField(max_digits=8, decimal_places=2)
+    healthcare_tax = models.DecimalField(max_digits=6, decimal_places=2, default=150.00) # Fixed hospital service tax
+    grand_total_payable = models.DecimalField(max_digits=8, decimal_places=2)
+    payment_status = models.CharField(max_length=15, default='Unpaid', choices=[('Unpaid', 'Unpaid'), ('Settled', 'Settled')])
+    generated_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"INV-{self.id} | Total: {self.grand_total_payable}"
