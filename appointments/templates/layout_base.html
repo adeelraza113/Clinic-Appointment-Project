@@ -16,11 +16,12 @@
             <div class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
                 <span class="nav-link text-info me-2">Logged in as: {{ user.username }}</span>
+                <!-- Staff Links -->
                 <a class="nav-link" href="{% url 'dashboard_url' %}">Dashboard</a>
                 {% if is_staff %}
-                <!-- Staff Links -->
-                <a class="nav-link" href="{% url 'create_patient_url' %}">Admin Registration</a>
+                <a class="nav-link" href="{% url 'onboard_doctor_url' %}">Onboard Doctor</a>
                 {% endif %}
+
                 <a class="nav-link" href="{% url 'book_slot_url' %}">Schedule Appointment</a>
                 <a class="nav-link btn btn-sm btn-danger text-white px-2 ms-2" href="{% url 'logout_url' %}">Logout</a>
                 {% else %}
