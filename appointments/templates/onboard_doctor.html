@@ -1,0 +1,44 @@
+{% extends 'layout_base.html' %}
+{% block main_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Secure Doctor Onboarding Portal</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    {% csrf_token %}
+                    <h6 class="text-uppercase text-muted fw-bold small mb-3">System Authentication Setup</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Doctor Username</label>
+                        <input type="text" name="doc_user" class="form-control" placeholder="e.g., dr.adeel" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Security Password</label>
+                        <input type="password" name="doc_pass" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    
+                    <hr class="my-4">
+                    <h6 class="text-uppercase text-muted fw-bold small mb-3">Clinical Profile Details</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Full Professional Name</label>
+                        <input type="text" name="expert_name" class="form-control" placeholder="e.g., Adeel Raza" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Medical Specialization</label>
+                        <input type="text" name="specialization" class="form-control" placeholder="e.g., Cardiology" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Consultation Fee (PKR)</label>
+                        <input type="number" name="consultation_fee" step="0.01" class="form-control" placeholder="e.g., 2000.00" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-dark w-100 mt-2">Onboard Specialist</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
