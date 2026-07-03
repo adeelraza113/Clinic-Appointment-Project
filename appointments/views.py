@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_集中
+from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -149,3 +149,35 @@ def alter_booking_status(request, slot_id, target_action):
         booking.save()
         messages.success(request, "Appointment cancelled successfully.")
     return redirect('dashboard_url')
+
+@login_required(login_url='login_url')
+def doctor_onboarding_view(request):
+    """Allows administrators to securely onboard medical experts into the system."""
+    if not (request.user.is_superuser or request.user.is_staff):
+        messages.error(request, "Access Denied: Administrative privileges required.")
+        return redirect('dashboard_url')
+
+    if request.method == "POST":
+        u_name = request.POST.get('doc_user')
+        u_pass = request.POST.get('doc_pass')
+        d_name = request.POST.get('expert_name')
+        d_spec = request.POST.get('specialization')
+        d_fee = request.POST.get('consultation_fee')
+
+        if User.objects.filter(username=u_name).exists():
+            messages.error(request, "This username is already taken.")
+            return render(request, 'onboard_doctor.html')
+
+        if u_name and u_pass and d_name and d_fee:
+            new_doc_user = User.objects.create_user(username=u_name, password=u_pass)
+
+            MedicalSpecialist.objects.create(
+                user_auth=new_doc_user,
+                expert_name=d_name,
+                medical_specialty=d_spec,
+                consultation_fee=d_fee
+            )
+            messages.success(request, f"Dr. {d_name} has been successfully registered into the ecosystem.")
+            return redirect('dashboard_url')
+
+    return render(request, 'onboard_doctor.html')
