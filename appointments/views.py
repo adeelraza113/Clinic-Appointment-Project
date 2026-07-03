@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
+from django.db import transaction
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -113,17 +114,12 @@ def add_clinical_summary_view(request, slot_id):
         symptoms = request.POST.get('symptoms')
         meds = request.POST.get('medications')
         
-        # 1. Save Prescription Record
         ClinicalPrescription.objects.create(associated_booking=booking, symptoms_observed=symptoms, prescribed_medication=meds)
-        
-        # 2. Automated Financial Accounting Invoice generation
         base_fee = booking.assigned_doctor.consultation_fee
         tax = 150.00
         grand_total = base_fee + tax
         
         FinancialInvoice.objects.create(linked_booking=booking, base_consultation_fee=base_fee, healthcare_tax=tax, grand_total_payable=grand_total)
-        
-        # Update Slot Status Lifecycle
         booking.current_status = 'Completed'
         booking.save()
         
@@ -152,9 +148,8 @@ def alter_booking_status(request, slot_id, target_action):
 
 @login_required(login_url='login_url')
 def doctor_onboarding_view(request):
-    """Allows administrators to securely onboard medical experts into the system."""
     if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, "Access Denied: Administrative privileges required.")
+        messages.error(request, "Access Denied.")
         return redirect('dashboard_url')
 
     if request.method == "POST":
@@ -165,19 +160,43 @@ def doctor_onboarding_view(request):
         d_fee = request.POST.get('consultation_fee')
 
         if User.objects.filter(username=u_name).exists():
-            messages.error(request, "This username is already taken.")
-            return render(request, 'onboard_doctor.html')
+            messages.error(request, "Username already exists.")
+            return redirect('onboard_doctor_url')
 
-        if u_name and u_pass and d_name and d_fee:
-            new_doc_user = User.objects.create_user(username=u_name, password=u_pass)
-
-            MedicalSpecialist.objects.create(
-                user_auth=new_doc_user,
-                expert_name=d_name,
-                medical_specialty=d_spec,
-                consultation_fee=d_fee
-            )
-            messages.success(request, f"Dr. {d_name} has been successfully registered into the ecosystem.")
+        try:
+            with transaction.atomic():
+                new_doc_user = User.objects.create_user(username=u_name, password=u_pass)
+                MedicalSpecialist.objects.create(
+                    user_auth=new_doc_user,
+                    expert_name=d_name,
+                    medical_specialty=d_spec,
+                    consultation_fee=d_fee
+                )
+            messages.success(request, f"Dr. {d_name} has been securely onboarded.")
             return redirect('dashboard_url')
-
+        except Exception as e:
+            messages.error(request, "System routing error during onboarding database commit.")
+            
     return render(request, 'onboard_doctor.html')
+
+@login_required(login_url='login_url')
+def view_invoice_view(request, booking_id):
+    booking = get_object_or_404(BookingSlot, id=booking_id)
+    is_patient = hasattr(request.user, 'patient') and booking.registered_patient == request.user.patient
+    is_doctor = hasattr(request.user, 'medicalspecialist') and booking.assigned_doctor == request.user.medicalspecialist
+    is_staff = request.user.is_staff or request.user.is_superuser
+    
+    if not (is_patient or is_doctor or is_staff):
+        messages.error(request, "Unauthorized Invoice Request Access.")
+        return redirect('dashboard_url')
+    consultation_fee = booking.assigned_doctor.consultation_fee
+    hospital_charges = 200.00  
+    grand_total = float(consultation_fee) + hospital_charges
+    
+    context = {
+        'booking': booking,
+        'consultation_fee': consultation_fee,
+        'hospital_charges': hospital_charges,
+        'grand_total': grand_total
+    }
+    return render(request, 'invoice_detail.html', context)
