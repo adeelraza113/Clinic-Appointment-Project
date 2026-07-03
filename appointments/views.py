@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from decimal import Decimal
+from django.db.models import Sum, Count, Q
+from django.utils import timezone
 from .models import MedicalSpecialist, PatientRecord, BookingSlot, ClinicalPrescription, FinancialInvoice
 
 def patient_signup_view(request):
@@ -46,34 +48,138 @@ def global_logout_view(request):
     logout(request)
     return redirect('login_url')
 
-
 @login_required(login_url='login_url')
 def clinic_dashboard_view(request):
-    """Enterprise multi-tenant dashboard rendering views based on specialized roles."""
+
     is_staff = request.user.is_superuser or request.user.is_staff
     is_doctor = hasattr(request.user, 'medicalspecialist')
     is_patient = hasattr(request.user, 'patientrecord')
 
+    grand_footprint = Decimal("0.00")
+    queue_load = 0
+    doctors_load = []
+    medical_history = []
+
+    active_bookings = BookingSlot.objects.none()
+
     if is_staff:
-        active_bookings = BookingSlot.objects.all().order_by('-schedule_date')
+
+        active_bookings = (
+            BookingSlot.objects
+            .select_related(
+                'registered_patient',
+                'assigned_doctor'
+            )
+            .order_by('-schedule_date', '-schedule_time')
+        )
+
+        completed_slots = BookingSlot.objects.filter(
+            current_status="Completed"
+        )
+
+        total_revenue = completed_slots.aggregate(
+            revenue=Sum("assigned_doctor__consultation_fee")
+        )["revenue"] or Decimal("0.00")
+
+        hospital_markup = (
+            Decimal(completed_slots.count()) *
+            Decimal("250.00")
+        )
+
+        grand_footprint = total_revenue + hospital_markup
+
+        today = timezone.now().date()
+
+        queue_load = BookingSlot.objects.filter(
+            current_status="Pending",
+            schedule_date=today
+        ).count()
+
+        doctors_load = (
+            MedicalSpecialist.objects
+            .annotate(
+                completed_cases=Count(
+                    "bookingslot",
+                    filter=Q(
+                        bookingslot__current_status="Completed"
+                    )
+                )
+            )
+            .order_by("-completed_cases")
+        )
+
     elif is_doctor:
-        # Doctor views ONLY their assigned patient slots
+
         current_doctor = request.user.medicalspecialist
-        active_bookings = BookingSlot.objects.filter(assigned_doctor=current_doctor).order_by('-schedule_date')
+
+        active_bookings = (
+            BookingSlot.objects
+            .filter(
+                assigned_doctor=current_doctor
+            )
+           .select_related(
+         'registered_patient',
+         'assigned_doctor',
+         'medical_record',
+        'invoice'
+     )
+            .order_by('-schedule_date', '-schedule_time')
+        )
+
     elif is_patient:
+
         current_patient = request.user.patientrecord
-        active_bookings = BookingSlot.objects.filter(registered_patient=current_patient).order_by('-schedule_date')
+
+        active_bookings = (
+            BookingSlot.objects
+            .filter(
+                registered_patient=current_patient
+            )
+            .select_related(
+                'assigned_doctor'
+            )
+            .order_by('-schedule_date', '-schedule_time')
+        )
+
+        medical_history = (
+    BookingSlot.objects
+    .filter(
+        registered_patient=current_patient,
+        current_status='Completed'
+    )
+    .select_related(
+        'assigned_doctor',
+        'medical_record',
+        'invoice'
+    )
+    .order_by('-schedule_date', '-schedule_time')
+)
+
     else:
-        active_bookings = []
+
+        active_bookings = BookingSlot.objects.none()
 
     context = {
+
         'bookings': active_bookings,
+
         'is_staff': is_staff,
         'is_doctor': is_doctor,
         'is_patient': is_patient,
-    }
-    return render(request, 'dashboard.html', context)
 
+        'grand_footprint': grand_footprint,
+        'queue_load': queue_load,
+        'doctors_load': doctors_load,
+
+        'medical_history': medical_history,
+
+    }
+
+    return render(
+        request,
+        'dashboard.html',
+        context
+    )
 
 @login_required(login_url='login_url')
 def create_appointment_slot(request):
@@ -133,10 +239,70 @@ def add_clinical_summary_view(request, slot_id):
 
 @login_required(login_url='login_url')
 def view_invoice_view(request, slot_id):
-    """Renders printable billing sheet for corporate processing."""
-    booking = BookingSlot.objects.get(id=slot_id)
-    invoice = FinancialInvoice.objects.get(linked_booking=booking)
-    return render(request, 'invoice_detail.html', {'booking': booking, 'invoice': invoice})
+    """
+    Secure invoice view for Patients, Doctors and Staff.
+    """
+
+    booking = get_object_or_404(
+        BookingSlot.objects.select_related(
+            "assigned_doctor",
+            "registered_patient",
+            "invoice"
+        ),
+        id=slot_id
+    )
+
+    # --------------------------
+    # Access Control
+    # --------------------------
+
+    is_staff = request.user.is_staff or request.user.is_superuser
+
+    is_doctor = (
+        hasattr(request.user, "medicalspecialist") and
+        booking.assigned_doctor == request.user.medicalspecialist
+    )
+
+    is_patient = (
+        hasattr(request.user, "patientrecord") and
+        booking.registered_patient == request.user.patientrecord
+    )
+
+    if not (is_staff or is_doctor or is_patient):
+        messages.error(
+            request,
+            "Access Violation: Unauthorized Invoice Request."
+        )
+        return redirect("dashboard_url")
+
+    # --------------------------
+    # Fetch Invoice
+    # --------------------------
+
+    invoice = get_object_or_404(
+        FinancialInvoice,
+        linked_booking=booking
+    )
+
+    context = {
+        "booking": booking,
+        "doctor": booking.assigned_doctor,
+        "patient": booking.registered_patient,
+        "invoice": invoice,
+
+        # Backward compatibility with existing template
+        "consultation_fee": invoice.base_consultation_fee,
+        "hospital_charges": invoice.healthcare_tax,
+        "grand_total": invoice.grand_total_payable,
+        "payment_status": invoice.payment_status,
+        "generated_date": invoice.generated_date,
+    }
+
+    return render(
+        request,
+        "invoice_detail.html",
+        context
+    )
 
 
 @login_required(login_url='login_url')
@@ -189,38 +355,7 @@ def doctor_onboarding_view(request):
             
     return render(request, 'onboard_doctor.html')
 
-@login_required(login_url='login_url')
-def view_invoice_view(request, slot_id):
-    # Fetch booking object with error handling
-    booking = get_object_or_404(BookingSlot, id=slot_id)
-    
-    # 1. Access Control Logic
-    is_patient = hasattr(request.user, 'patient') and booking.registered_patient == request.user.patient
-    is_doctor = hasattr(request.user, 'medicalspecialist') and booking.assigned_doctor == request.user.medicalspecialist
-    is_staff = request.user.is_staff or request.user.is_superuser
-    
-    if not (is_patient or is_doctor or is_staff):
-        messages.error(request, "Access Violation: Unauthorized Invoice Request.")
-        return redirect('dashboard_url')
 
-    doctor = booking.assigned_doctor
-    
-    if doctor and hasattr(doctor, 'consultation_fee'):
-        consultation_fee = doctor.consultation_fee  
-    else:
-        consultation_fee = Decimal('0.00')
-
-    hospital_charges = Decimal('250.00')  
-    grand_total = consultation_fee + hospital_charges
-
-    context = {
-        'booking': booking,
-        'doctor': doctor,
-        'consultation_fee': consultation_fee,
-        'hospital_charges': hospital_charges,
-        'grand_total': grand_total
-    }
-    return render(request, 'invoice_detail.html', context)
 
 @login_required(login_url='login_url')
 def treat_patient_view(request, slot_id):
@@ -263,3 +398,4 @@ def treat_patient_view(request, slot_id):
         'patient': booking.registered_patient
     }
     return render(request, 'treat_patient.html', context)
+

@@ -1,59 +1,343 @@
 {% extends 'layout_base.html' %}
+
 {% block main_content %}
-<div class="card shadow-sm">
-    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Clinical Workflow Dashboard</h5>
+
+<div class="card shadow-sm border-0">
+
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
+
+        <h5 class="mb-2 mb-md-0">
+            Clinical Workflow Dashboard
+        </h5>
+
         <div>
+
             {% if is_staff %}
-            <a href="{% url 'onboard_doctor_url' %}" class="btn btn-sm btn-outline-light me-2">Onboard Doctor</a>
+
+            <a href="{% url 'onboard_doctor_url' %}" class="btn btn-sm btn-outline-light me-2">
+
+                Onboard Doctor
+
+            </a>
+
             {% endif %}
-            <a href="{% url 'book_slot_url' %} " class="btn btn-sm btn-light">Schedule Slot</a>
+            {% if is_patient %}
+            <a href="{% url 'book_slot_url' %}" class="btn btn-sm btn-light">
+
+                Schedule Slot
+
+            </a>
+            {% endif %}
+
         </div>
+
     </div>
+
     <div class="card-body">
-        {% if messages %}{% for m in messages %}<div class="alert alert-info">{{ m }}</div>{% endfor %}{% endif %}
-        <table class="table table-hover mt-3">
-            <thead>
-                <tr>
-                    <th>Patient</th>
-                    <th>Doctor</th>
-                    <th>Date / Time</th>
-                    <th>Status</th>
-                    <th>Clinical Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for b in bookings %}
-                <tr>
-                    <td>{{ b.registered_patient.full_name }}</td>
-                    <td>Dr. {{ b.assigned_doctor.expert_name }}</td>
-                    <td>{{ b.schedule_date }} @ {{ b.schedule_time }}</td>
-                    <td><span class="badge bg-secondary">{{ b.current_status }}</span></td>
-                    <td>
-                        {% if b.current_status == 'Active' %}
-                        {% if is_doctor %}
-                        <a href="{% url 'add_prescription_url' b.id %}" class="btn btn-sm btn-success py-0">Treat
-                            Patient</a>
-                        {% endif %}
-                        {% if is_staff or is_patient %}
-                        <a href="{% url 'alter_status_url' b.id 'Cancelled' %}"
-                            class="btn btn-sm btn-outline-danger py-0">Cancel</a>
-                        {% endif %}
-                        {% elif b.current_status == 'Completed' %}
-                        <a href="{% url 'view_invoice_url' b.id %}" class="btn btn-sm btn-primary py-0">View Invoice /
-                            Receipt</a>
-                        {% else %}
-                        <span class="text-muted">No Actions Available</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center text-muted">No active records mapped in this queue.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+        {% if messages %}
+
+        {% for m in messages %}
+
+        <div class="alert alert-info shadow-sm">
+
+            {{ m }}
+
+        </div>
+
+        {% endfor %}
+
+        {% endif %}
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle">
+
+                <thead class="table-light">
+
+                    <tr>
+
+                        <th>Patient</th>
+
+                        <th>Doctor</th>
+
+                        <th>Date / Time</th>
+
+                        <th>Status</th>
+
+                        <th width="260">
+                            Clinical Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for b in bookings %}
+
+                    <tr>
+
+                        <td>
+
+                            {{ b.registered_patient.full_name }}
+
+                        </td>
+
+                        <td>
+
+                            Dr. {{ b.assigned_doctor.expert_name }}
+
+                        </td>
+
+                        <td>
+
+                            <strong>{{ b.schedule_date }}</strong>
+
+                            <br>
+
+                            <small class="text-muted">
+
+                                {{ b.schedule_time }}
+
+                            </small>
+
+                        </td>
+
+                        <td>
+
+                            {% if b.current_status == 'Pending' %}
+
+                            <span class="badge bg-warning text-dark">
+                                Pending
+                            </span>
+
+                            {% elif b.current_status == 'Active' %}
+
+                            <span class="badge bg-success">
+                                Active
+                            </span>
+
+                            {% elif b.current_status == 'Completed' %}
+
+                            <span class="badge bg-primary">
+                                Completed
+                            </span>
+
+                            {% else %}
+
+                            <span class="badge bg-danger">
+                                Cancelled
+                            </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if b.current_status == 'Active' %}
+
+                            {% if is_doctor %}
+
+                            <a href="{% url 'add_prescription_url' b.id %}" class="btn btn-success btn-sm">
+
+                                Treat Patient
+
+                            </a>
+
+                            {% endif %}
+
+                            {% if is_staff or is_patient %}
+
+                            <a href="{% url 'alter_status_url' b.id 'Cancelled' %}"
+                                class="btn btn-outline-danger btn-sm">
+
+                                Cancel
+
+                            </a>
+
+                            {% endif %}
+
+                            {% elif b.current_status == 'Completed' %}
+
+                            <a href="{% url 'view_invoice_url' b.id %}" class="btn btn-primary btn-sm">
+
+                                View Invoice
+
+                            </a>
+
+                            {% else %}
+
+                            <span class="text-muted">
+
+                                No Actions Available
+
+                            </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td colspan="5" class="text-center text-muted py-4">
+
+                            No appointment records available.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
     </div>
+
 </div>
+{% if is_patient %}
+
+<div class="row mt-5">
+
+    <div class="col-lg-12">
+
+        <h4 class="fw-bold text-dark mb-4">
+            🩺 Verified Past Medical History Timeline
+        </h4>
+
+        {% if medical_history %}
+
+        <div class="position-relative border-start border-2 border-primary ms-3 ps-4">
+
+            {% for record in medical_history %}
+
+            <div class="mb-5 position-relative">
+
+                <!-- Timeline Dot -->
+
+                <div class="position-absolute start-0 translate-middle bg-primary rounded-circle"
+                    style="width:14px;height:14px;left:-25px !important;margin-top:6px;">
+                </div>
+
+                <div class="card shadow-sm border-0 border-start border-3 border-success bg-white">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+
+                            <div>
+
+                                <h5 class="fw-bold text-dark mb-0">
+
+                                    Dr. {{ record.assigned_doctor.expert_name }}
+
+                                </h5>
+
+                                <small class="text-muted">
+
+                                    {{ record.assigned_doctor.field_of_expertise }}
+
+                                </small>
+
+                            </div>
+
+                            <span class="badge bg-light text-dark border border-secondary fw-semibold mt-2 mt-sm-0">
+
+                                📅 Consultation Date:
+                                {{ record.schedule_date|date:"d M, Y" }}
+
+                            </span>
+
+                        </div>
+
+                        <!-- Symptoms -->
+
+                        <div class="mb-3">
+
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">
+                                Clinical Impressions & Notes
+                            </h6>
+
+                            <div class="bg-light border rounded p-3">
+
+                                <p class="text-success bg-light p-3 rounded border border-success border-opacity-25 mb-0 fw-medium"
+                                    style="white-space: pre-line; font-family: monospace;">
+                                    {{record.medical_record.symptoms_observed }}</p>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Prescription -->
+
+                        <div class="mb-3">
+
+                            <h6 class="text-uppercase text-muted fw-bold small mb-1">
+                                Prescription Medication Details
+                            </h6>
+
+                            <div class="bg-light border border-success border-opacity-25 rounded p-3">
+
+                                <p class="text-success bg-light p-3 rounded border border-success border-opacity-25 mb-0 fw-medium"
+                                    style="white-space: pre-line; font-family: monospace;">{{record.medical_record.prescribed_medication }}</p>
+
+                                </pre>
+
+                            </div>
+
+                        </div>
+
+                        <div class="mt-3">
+
+                            <div class="d-flex justify-content-end">
+
+                                <a href="{% url 'view_invoice_url' record.id %}" class="btn btn-primary btn-sm">
+
+                                    🧾 View Invoice / Receipt
+
+                                </a>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="alert alert-light border shadow-sm rounded p-4 text-center">
+
+            <p class="mb-0 text-muted">
+
+                You do not have any historical completed sessions tracked yet.
+
+            </p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endif %}
+
 {% endblock %}
