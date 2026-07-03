@@ -1,27 +1,103 @@
 {% extends 'layout_base.html' %}
 {% block main_content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card border-dark shadow">
-            <div class="card-body p-4">
-                <div class="text-center border-bottom pb-3 mb-3">
-                    <h3>Sird CareClinic Engine</h3>
-                    <p class="text-muted mb-0">Official Electronic Billing Invoice Document</p>
+<style>
+    /* Print Utility Style Integration */
+    @media print {
+        body { background-color: #fff !important; }
+        .navbar, .no-print, .btn { display: none !important; }
+        .card { border: none !important; box-shadow: none !important; }
+        .invoice-box { padding: 0 !important; margin: 0 !important; }
+    }
+</style>
+
+<div class="row justify-content-center invoice-box">
+    <div class="col-md-8">
+        <!-- Back and Print Action Utilities -->
+        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+            <a href="{% url 'dashboard_url' %}" class="btn btn-sm btn-secondary">← Back to Dashboard</a>
+            <button onclick="window.print();" class="btn btn-sm btn-dark">🖨️ Print Receipt</button>
+        </div>
+
+        <div class="card shadow-sm border-0 bg-white">
+            <div class="card-body p-5">
+                <!-- Header Component -->
+                <div class="row mb-4">
+                    <div class="col-sm-6">
+                        <h4 class="text-uppercase fw-bold tracking-tight text-dark mb-1">CareClinic Engine</h4>
+                        <p class="text-muted small mb-0">Healthcare System Audit Statement</p>
+                    </div>
+                    <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
+                        <h5 class="text-muted mb-1">INVOICE</h5>
+                        <p class="mb-0 text-dark fw-medium small">Invoice ID: #CLN-{{ booking.id }}</p>
+                        <p class="text-muted small">Date: {{ booking.schedule_date }}</p>
+                    </div>
                 </div>
-                <h5>Invoice Meta Details:</h5>
-                <p class="mb-1"><strong>Invoice reference:</strong> INV-00{{ invoice.id }}</p>
-                <p class="mb-1"><strong>Patient Subject:</strong> {{ booking.registered_patient.full_name }}</p>
-                <p class="mb-4"><strong>Attending Specialist:</strong> Dr. {{ booking.assigned_doctor.expert_name }}</p>
-                
-                <table class="table border-top">
-                    <thead><tr><th>Description</th><th class="text-end">Amount (PKR)</th></tr></thead>
-                    <tbody>
-                        <tr><td>Consultation Base Fee</td><td class="text-end">{{ invoice.base_consultation_fee }}</td></tr>
-                        <tr><td>Hospital Service Cess / Tax</td><td class="text-end">{{ invoice.healthcare_tax }}</td></tr>
-                        <tr class="table-dark fw-bold"><td>Grand Total Payable</td><td class="text-end">{{ invoice.grand_total_payable }} PKR</td></tr>
-                    </tbody>
-                </table>
-                <div class="d-grid mt-4"><button onclick="window.print()" class="btn btn-dark">Print Medical Receipt</button></div>
+
+                <hr class="my-4 text-muted opacity-25">
+
+                <!-- User & Entity Meta Matrix -->
+                <div class="row mb-5">
+                    <div class="col-sm-6">
+                        <h6 class="text-uppercase text-muted fw-bold small mb-2">Patient Details</h6>
+                        <h6 class="text-dark mb-1">{{ booking.registered_patient.patient_name }}</h6>
+                        <p class="text-muted small mb-0">ID: PAT-{{ booking.registered_patient.id }}</p>
+                    </div>
+                    <div class="col-sm-6 text-sm-end mt-4 mt-sm-0">
+                        <h6 class="text-uppercase text-muted fw-bold small mb-2">Assigned Specialist</h6>
+                        <h6 class="text-dark mb-1">Dr. {{ doctor.expert_name }}</h6>
+                        <p class="text-muted small mb-0">{{ doctor.field_of_expertise }}</p>
+                    </div>
+                </div>
+                <!-- Invoice Line Items Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">Service Description</th>
+                                <th class="text-end pe-3">Subtotal Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-3 fw-medium">
+                                    Clinical Consultation Fee <br>
+                                    <small class="text-muted fw-normal">Direct specialist mapping allocation</small>
+                                </td>
+                                <td class="text-end pe-3 fw-bold text-secondary">PKR {{ consultation_fee }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 fw-medium">
+                                    Hospital Operational Surcharge <br>
+                                    <small class="text-muted fw-normal">Administrative and platform overheads</small>
+                                </td>
+                                <td class="text-end pe-3 text-secondary">PKR {{ hospital_charges }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals Calculation Panel -->
+                <div class="row justify-content-end mt-4">
+                    <div class="col-sm-5">
+                        <div class="p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Tax Rate:</span>
+                                <span class="text-dark small fw-medium">0.00% (Exempt)</span>
+                            </div>
+                            <hr class="my-2 opacity-50">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-dark">Grand Total:</span>
+                                <span class="fs-5 fw-bold text-dark">PKR {{ grand_total }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Audit Compliance Seal -->
+                <div class="mt-5 pt-4 text-center border-top border-light">
+                    <p class="text-muted small mb-0">This is a system-generated electronic receipt compliant with healthcare logs.</p>
+                    <p class="text-muted tracking-wide code small">Pipeline Validation Secured ✓</p>
+                </div>
             </div>
         </div>
     </div>

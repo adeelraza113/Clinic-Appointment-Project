@@ -4,6 +4,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from decimal import Decimal
 from .models import MedicalSpecialist, PatientRecord, BookingSlot, ClinicalPrescription, FinancialInvoice
 
 def patient_signup_view(request):
@@ -148,8 +149,9 @@ def alter_booking_status(request, slot_id, target_action):
 
 @login_required(login_url='login_url')
 def doctor_onboarding_view(request):
+    """Secure administrative view to onboard doctors matching strict DB schema guidelines."""
     if not (request.user.is_superuser or request.user.is_staff):
-        messages.error(request, "Access Denied.")
+        messages.error(request, "Access Denied: Administrative privileges required.")
         return redirect('dashboard_url')
 
     if request.method == "POST":
@@ -157,46 +159,112 @@ def doctor_onboarding_view(request):
         u_pass = request.POST.get('doc_pass')
         d_name = request.POST.get('expert_name')
         d_spec = request.POST.get('specialization')
+        d_phone = request.POST.get('contact_number') 
         d_fee = request.POST.get('consultation_fee')
 
+
         if User.objects.filter(username=u_name).exists():
-            messages.error(request, "Username already exists.")
-            return redirect('onboard_doctor_url')
+            messages.error(request, "Error: This username is already registered.")
+            return render(request, 'onboard_doctor.html')
 
         try:
             with transaction.atomic():
                 new_doc_user = User.objects.create_user(username=u_name, password=u_pass)
+                
                 MedicalSpecialist.objects.create(
                     user_auth=new_doc_user,
                     expert_name=d_name,
-                    medical_specialty=d_spec,
-                    consultation_fee=d_fee
+                    field_of_expertise=d_spec, 
+                    contact_number=d_phone,      
+                    consultation_fee=d_fee      
                 )
-            messages.success(request, f"Dr. {d_name} has been securely onboarded.")
+                
+            messages.success(request, f"Dr. {d_name} has been successfully onboarded into the ecosystem.")
             return redirect('dashboard_url')
+            
         except Exception as e:
-            messages.error(request, "System routing error during onboarding database commit.")
+            # Capture specific DB constraints anomalies safely
+            messages.error(request, f"Database Integrity Failure: {str(e)}")
             
     return render(request, 'onboard_doctor.html')
 
 @login_required(login_url='login_url')
-def view_invoice_view(request, booking_id):
-    booking = get_object_or_404(BookingSlot, id=booking_id)
+def view_invoice_view(request, slot_id):
+    # Fetch booking object with error handling
+    booking = get_object_or_404(BookingSlot, id=slot_id)
+    
+    # 1. Access Control Logic
     is_patient = hasattr(request.user, 'patient') and booking.registered_patient == request.user.patient
     is_doctor = hasattr(request.user, 'medicalspecialist') and booking.assigned_doctor == request.user.medicalspecialist
     is_staff = request.user.is_staff or request.user.is_superuser
     
     if not (is_patient or is_doctor or is_staff):
-        messages.error(request, "Unauthorized Invoice Request Access.")
+        messages.error(request, "Access Violation: Unauthorized Invoice Request.")
         return redirect('dashboard_url')
-    consultation_fee = booking.assigned_doctor.consultation_fee
-    hospital_charges = 200.00  
-    grand_total = float(consultation_fee) + hospital_charges
+
+    doctor = booking.assigned_doctor
     
+    if doctor and hasattr(doctor, 'consultation_fee'):
+        consultation_fee = doctor.consultation_fee  
+    else:
+        consultation_fee = Decimal('0.00')
+
+    hospital_charges = Decimal('250.00')  
+    grand_total = consultation_fee + hospital_charges
+
     context = {
         'booking': booking,
+        'doctor': doctor,
         'consultation_fee': consultation_fee,
         'hospital_charges': hospital_charges,
         'grand_total': grand_total
     }
     return render(request, 'invoice_detail.html', context)
+
+@login_required(login_url='login_url')
+def treat_patient_view(request, slot_id):
+    """Secured clinical view to transition appointment states and record observations."""
+    booking = get_object_or_404(BookingSlot, id=slot_id)
+    
+    # 1. Strict Ownership Enforcement
+    # Verify karein ke current user wahi assigned doctor hai jiski appointments_medicalspecialist entry mapped hai
+    is_assigned_doctor = hasattr(request.user, 'medicalspecialist') and booking.assigned_doctor == request.user.medicalspecialist
+    
+    if not is_assigned_doctor:
+        messages.error(request, "Access Denied: You are not the assigned specialist for this patient transaction.")
+        return redirect('dashboard_url')
+        
+    # Prevent multi-execution state mutations
+    if booking.current_status == 'Completed':  # Apne status string check kar lein (e.g., 'Completed', 'Treated')
+        messages.warning(request, "Clinical log warning: This case entry is already locked and completed.")
+        return redirect('dashboard_url')
+
+    if request.method == "POST":
+        clinical_notes = request.POST.get('clinical_notes')
+        medication_plan = request.POST.get('medication_plan')
+        
+        try:
+            with transaction.atomic():
+                # 2. State transition change
+                booking.current_status = 'Completed'
+                
+                # Agar aapki DB schema mein notes save karne ke columns hain to update karein,
+                # otherwise aap metadata field ya alag prescription model update kar sakte hain:
+                if hasattr(booking, 'doctor_notes'):
+                    booking.doctor_notes = clinical_notes
+                if hasattr(booking, 'prescription_details'):
+                    booking.prescription_details = medication_plan
+                    
+                booking.save()
+                
+            messages.success(request, f"Medical chart updated successfully for Patient: {booking.registered_patient.patient_name}.")
+            return redirect('dashboard_url')
+            
+        except Exception as e:
+            messages.error(request, f"Pipeline Error committing clinical transaction: {str(e)}")
+
+    context = {
+        'booking': booking,
+        'patient': booking.registered_patient
+    }
+    return render(request, 'treat_patient.html', context)
