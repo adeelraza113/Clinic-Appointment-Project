@@ -3,7 +3,12 @@
 <div class="card shadow-sm">
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Clinical Workflow Dashboard</h5>
-        <a href="{% url 'book_slot_url' %} " class="btn btn-sm btn-light">Schedule Slot</a>
+        <div>
+            {% if is_staff %}
+            <a href="{% url 'onboard_doctor_url' %}" class="btn btn-sm btn-outline-light me-2">Onboard Doctor</a>
+            {% endif %}
+            <a href="{% url 'book_slot_url' %} " class="btn btn-sm btn-light">Schedule Slot</a>
+        </div>
     </div>
     <div class="card-body">
         {% if messages %}{% for m in messages %}<div class="alert alert-info">{{ m }}</div>{% endfor %}{% endif %}
@@ -26,21 +31,26 @@
                     <td><span class="badge bg-secondary">{{ b.current_status }}</span></td>
                     <td>
                         {% if b.current_status == 'Active' %}
-                            {% if is_doctor %}
-                                <a href="{% url 'add_prescription_url' b.id %}" class="btn btn-sm btn-success py-0">Treat Patient</a>
-                            {% endif %}
-                            {% if is_staff or is_patient %}
-                                <a href="{% url 'alter_status_url' b.id 'Cancelled' %}" class="btn btn-sm btn-outline-danger py-0">Cancel</a>
-                            {% endif %}
+                        {% if is_doctor %}
+                        <a href="{% url 'add_prescription_url' b.id %}" class="btn btn-sm btn-success py-0">Treat
+                            Patient</a>
+                        {% endif %}
+                        {% if is_staff or is_patient %}
+                        <a href="{% url 'alter_status_url' b.id 'Cancelled' %}"
+                            class="btn btn-sm btn-outline-danger py-0">Cancel</a>
+                        {% endif %}
                         {% elif b.current_status == 'Completed' %}
-                            <a href="{% url 'view_invoice_url' b.id %}" class="btn btn-sm btn-primary py-0">View Invoice / Receipt</a>
+                        <a href="{% url 'view_invoice_url' b.id %}" class="btn btn-sm btn-primary py-0">View Invoice /
+                            Receipt</a>
                         {% else %}
-                            <span class="text-muted">No Actions Available</span>
+                        <span class="text-muted">No Actions Available</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-center text-muted">No active records mapped in this queue.</td></tr>
+                <tr>
+                    <td colspan="5" class="text-center text-muted">No active records mapped in this queue.</td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
