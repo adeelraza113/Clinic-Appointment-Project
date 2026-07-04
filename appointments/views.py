@@ -54,14 +54,11 @@ def clinic_dashboard_view(request):
     is_staff = request.user.is_superuser or request.user.is_staff
     is_doctor = hasattr(request.user, 'medicalspecialist')
     is_patient = hasattr(request.user, 'patientrecord')
-
     grand_footprint = Decimal("0.00")
     queue_load = 0
     doctors_load = []
     medical_history = []
-
     active_bookings = BookingSlot.objects.none()
-
     if is_staff:
 
         active_bookings = (
@@ -76,7 +73,6 @@ def clinic_dashboard_view(request):
         completed_slots = BookingSlot.objects.filter(
             current_status="Completed"
         )
-
         total_revenue = completed_slots.aggregate(
             revenue=Sum("assigned_doctor__consultation_fee")
         )["revenue"] or Decimal("0.00")
@@ -85,11 +81,8 @@ def clinic_dashboard_view(request):
             Decimal(completed_slots.count()) *
             Decimal("250.00")
         )
-
         grand_footprint = total_revenue + hospital_markup
-
         today = timezone.now().date()
-
         queue_load = BookingSlot.objects.filter(
             current_status="Pending",
             schedule_date=today
@@ -107,9 +100,7 @@ def clinic_dashboard_view(request):
             )
             .order_by("-completed_cases")
         )
-
     elif is_doctor:
-
         current_doctor = request.user.medicalspecialist
 
         active_bookings = (
@@ -125,11 +116,8 @@ def clinic_dashboard_view(request):
      )
             .order_by('-schedule_date', '-schedule_time')
         )
-
     elif is_patient:
-
         current_patient = request.user.patientrecord
-
         active_bookings = (
             BookingSlot.objects
             .filter(
@@ -156,25 +144,18 @@ def clinic_dashboard_view(request):
 )
 
     else:
-
         active_bookings = BookingSlot.objects.none()
 
     context = {
-
         'bookings': active_bookings,
-
         'is_staff': is_staff,
         'is_doctor': is_doctor,
         'is_patient': is_patient,
-
         'grand_footprint': grand_footprint,
         'queue_load': queue_load,
         'doctors_load': doctors_load,
-
         'medical_history': medical_history,
-
     }
-
     return render(
         request,
         'dashboard.html',
@@ -242,7 +223,6 @@ def view_invoice_view(request, slot_id):
     """
     Secure invoice view for Patients, Doctors and Staff.
     """
-
     booking = get_object_or_404(
         BookingSlot.objects.select_related(
             "assigned_doctor",
@@ -251,23 +231,15 @@ def view_invoice_view(request, slot_id):
         ),
         id=slot_id
     )
-
-    # --------------------------
-    # Access Control
-    # --------------------------
-
     is_staff = request.user.is_staff or request.user.is_superuser
-
     is_doctor = (
         hasattr(request.user, "medicalspecialist") and
         booking.assigned_doctor == request.user.medicalspecialist
     )
-
     is_patient = (
         hasattr(request.user, "patientrecord") and
         booking.registered_patient == request.user.patientrecord
     )
-
     if not (is_staff or is_doctor or is_patient):
         messages.error(
             request,
@@ -275,22 +247,15 @@ def view_invoice_view(request, slot_id):
         )
         return redirect("dashboard_url")
 
-    # --------------------------
-    # Fetch Invoice
-    # --------------------------
-
     invoice = get_object_or_404(
         FinancialInvoice,
         linked_booking=booking
     )
-
     context = {
         "booking": booking,
         "doctor": booking.assigned_doctor,
         "patient": booking.registered_patient,
         "invoice": invoice,
-
-        # Backward compatibility with existing template
         "consultation_fee": invoice.base_consultation_fee,
         "hospital_charges": invoice.healthcare_tax,
         "grand_total": invoice.grand_total_payable,
@@ -350,7 +315,6 @@ def doctor_onboarding_view(request):
             return redirect('dashboard_url')
             
         except Exception as e:
-            # Capture specific DB constraints anomalies safely
             messages.error(request, f"Database Integrity Failure: {str(e)}")
             
     return render(request, 'onboard_doctor.html')
