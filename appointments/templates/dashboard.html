@@ -3,193 +3,107 @@
 {% block main_content %}
 
 <div class="card shadow-sm border-0">
-
     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
-
         <h5 class="mb-2 mb-md-0">
             Clinical Workflow Dashboard
         </h5>
-
         <div>
-
             {% if is_staff %}
-
             <a href="{% url 'onboard_doctor_url' %}" class="btn btn-sm btn-outline-light me-2">
-
                 Onboard Doctor
-
             </a>
-
             {% endif %}
             {% if is_patient %}
             <a href="{% url 'book_slot_url' %}" class="btn btn-sm btn-light">
-
                 Schedule Slot
-
             </a>
             {% endif %}
-
         </div>
-
     </div>
-
     <div class="card-body">
-
         {% if messages %}
-
         {% for m in messages %}
-
         <div class="alert alert-info shadow-sm">
-
             {{ m }}
-
         </div>
-
         {% endfor %}
-
         {% endif %}
-
         <div class="table-responsive">
-
             <table class="table table-hover align-middle">
-
                 <thead class="table-light">
-
                     <tr>
-
                         <th>Patient</th>
-
                         <th>Doctor</th>
-
                         <th>Date / Time</th>
-
                         <th>Status</th>
-
                         <th width="260">
                             Clinical Actions
                         </th>
-
                     </tr>
-
                 </thead>
-
                 <tbody>
-
                     {% for b in bookings %}
-
                     <tr>
-
                         <td>
-
                             {{ b.registered_patient.full_name }}
-
                         </td>
-
                         <td>
-
                             Dr. {{ b.assigned_doctor.expert_name }}
-
                         </td>
-
                         <td>
-
                             <strong>{{ b.schedule_date }}</strong>
-
                             <br>
-
                             <small class="text-muted">
-
                                 {{ b.schedule_time }}
-
                             </small>
-
                         </td>
-
                         <td>
-
                             {% if b.current_status == 'Pending' %}
-
                             <span class="badge bg-warning text-dark">
                                 Pending
                             </span>
-
                             {% elif b.current_status == 'Active' %}
-
                             <span class="badge bg-success">
                                 Active
                             </span>
-
                             {% elif b.current_status == 'Completed' %}
-
                             <span class="badge bg-primary">
                                 Completed
                             </span>
-
                             {% else %}
-
                             <span class="badge bg-danger">
                                 Cancelled
                             </span>
-
                             {% endif %}
-
                         </td>
-
                         <td>
-
                             {% if b.current_status == 'Active' %}
-
                             {% if is_doctor %}
-
                             <a href="{% url 'add_prescription_url' b.id %}" class="btn btn-success btn-sm">
-
                                 Treat Patient
-
                             </a>
-
                             {% endif %}
-
                             {% if is_staff or is_patient %}
-
                             <a href="{% url 'alter_status_url' b.id 'Cancelled' %}"
                                 class="btn btn-outline-danger btn-sm">
-
                                 Cancel
-
                             </a>
-
                             {% endif %}
-
                             {% elif b.current_status == 'Completed' %}
-
                             <a href="{% url 'view_invoice_url' b.id %}" class="btn btn-primary btn-sm">
-
                                 View Invoice
-
                             </a>
-
                             {% else %}
-
                             <span class="text-muted">
-
                                 No Actions Available
-
                             </span>
-
                             {% endif %}
-
                         </td>
-
                     </tr>
-
                     {% empty %}
-
                     <tr>
-
                         <td colspan="5" class="text-center text-muted py-4">
-
                             No appointment records available.
-
                         </td>
                     </tr>
                     {% endfor %}
